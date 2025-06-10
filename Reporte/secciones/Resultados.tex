@@ -1,0 +1,58 @@
+\chapter{Resultados y Discusi\'on}
+
+Durante la ejecución del algoritmo genético, se realizaron múltiples corridas completas para cada uno de los tres problemas de optimización de carteras, lo que permitió evaluar la estabilidad y eficiencia del método. Los resultados se agruparon en resúmenes globales, donde se registraron indicadores clave, los cuales se encuentran dentro de las siguientes tablas:
+
+\foreach \i in {1,...,3}{
+    \input{secciones/tablas/Problem\i/resumenes/resumen_global_corridas.tex}
+}
+
+Donde cada Indicador Representa lo siguiente:
+\begin{itemize}
+    \item \textbf{Mejor (Fitness):} Representa la soluci\'on con el valor de fitness m\'inimo obtenido en todas las corridas.
+    \item \textbf{Peor (Fitness):} Indica la soluci\'on con el mayor valor de fitness, sirviendo como referencia de la variabilidad en la b\'usqueda.
+    \item \textbf{Media:} Es el promedio de los valores de fitness de la mejor soluci\'on de cada corrida, ofreciendo una visi\'on global del desempe\~no del algoritmo.
+    \item \textbf{Desv. Est\'andar:} Mide la dispersi\'on de los valores de fitness entre las corridas, reflejando la estabilidad y consistencia del proceso evolutivo.
+\end{itemize}
+
+\section{Análisis de los Resultados}
+
+\subsection{Consistencia y Robustez}
+
+Los resúmenes globales muestran que, a lo largo de las corridas, el algoritmo tiende a converger de manera consistente hacia soluciones de alta calidad. Una baja desviación estándar en los valores de fitness sugiere que el proceso evolutivo es robusto y no depende en exceso de la aleatoriedad inherente a los operadores genéticos. Esto es crucial para problemas de optimización de carteras, ya que garantiza que la metodología aplicada es reproducible y confiable.
+
+\subsection{Análisis por Problema}
+
+\subsubsection{Problema 1: Maximización de Retorno}
+
+El resumen global para el Problema 1 indica la capacidad del algoritmo para identificar carteras con un alto retorno esperado. El valor de ``Mejor (Retorno)'' obtenido se sitúa en un rango competitivo, y la media de las corridas respalda la eficacia del algoritmo genético para explorar el espacio de soluciones y encontrar combinaciones de activos que maximizan el retorno, respetando la restricción de inversión máxima por activo.
+
+\subsubsection{Problema 2: Minimización de Riesgo}
+
+Para el Problema 2, los resultados globales evidencian una convergencia hacia carteras con un riesgo mínimo, cumpliendo con la restricción de rendimiento esperado mínimo. Los indicadores de ``Peor (Riesgo)'' y ``Desv. Estándar'' muestran que, aunque existen ciertas variaciones entre corridas, el algoritmo genético logra encontrar soluciones consistentes que equilibran el riesgo y el rendimiento esperado.
+
+\subsubsection{Problema 3: Maximización de Retorno con Riesgo Controlado}
+
+En el Problema 3, los resultados muestran la capacidad del algoritmo para maximizar el retorno esperado sin exceder un nivel de riesgo predefinido. Esto demuestra la efectividad del método de penalización para guiar la búsqueda hacia soluciones que satisfacen simultáneamente múltiples objetivos y restricciones.
+
+\subsection{Evolución del Fitness y Visualizaciones}
+Las gr\'aficas de la evoluci\'on del fitness, tanto en su forma original como normalizada, permiten observar el progreso generacional. Se aprecia una clara tendencia a la mejora, donde la mayor\'ia de las corridas muestran una reducci\'on significativa del valor de fitness a medida que avanzan las generaciones.
+
+A continuación se dejan las gráficas de la evolución del fitness:
+\foreach \i in {1,...,3}{
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{recursos/evolucion_fitness_with_constraints_Problem\i.png}
+        \caption{Evolución del \text{fitness} del Problema \i}%
+        \label{fig:fitness_problem_\i}
+    \end{figure}
+}
+\section{Discusión Resultados}
+
+\begin{itemize}
+    \item \textbf{Eficacia del Algoritmo:} Los indicadores globales extra\'idos de los CSV demuestran que el algoritmo gen\'etico es capaz de acercarse a la soluci\'on \'optima, manteniendo una evoluci\'on progresiva y consistente en la reducci\'on del valor de fitness.
+
+    \item \textbf{Diversidad y Convergencia:} La aplicaci\'on de operadores de selecci\'on, cruzamiento y mutaci\'on, junto con el mecanismo de elitismo, garantiza un equilibrio entre la exploraci\'on y la explotaci\'on del espacio de b\'usqueda. Esto se refleja en la baja variabilidad entre corridas, lo que es un indicativo de la estabilidad del proceso.
+
+    \item \textbf{Potencial de Adaptaci\'on:} La estructura modular y la robustez mostrada por los resultados permiten considerar la posibilidad de aplicar este marco a otros problemas de optimizaci\'on, incluso aquellos con mayores dimensiones o con funciones objetivo de mayor complejidad.
+\end{itemize}
+

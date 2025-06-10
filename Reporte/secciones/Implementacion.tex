@@ -1,0 +1,70 @@
+\chapter{Implementaci\'on}
+
+El proyecto se ha desarrollado siguiendo una arquitectura modular\footnote{Se puede encontrar el codigo perteneciente a cada funcion dentro de} que permite separar claramente las distintas funcionalidades y facilita tanto el mantenimiento como la ampliaci\'on futura. A continuaci\'on, se detallan los principales componentes y c\'omo se integran en el sistema:
+
+\section{Funciones Objetivo}
+
+\subsection{Descripci\'on}
+Las funciones objetivo definen el problema a optimizar. En este proyecto se incluyen dos funciones:
+\begin{itemize}
+    \item \textbf{Tasa de retorno del portafolio}: Una funci\'on que nos permite calcular la ganancia esperada de un portafolio de inversion considerando las ganancias individuales de cada instrumento.
+    \item \textbf{Varianza del portafolio}: Una funci\'on que nos permite calcular el riesgo de un portafolio de inversion considerando la covarianza de nuestros instrumentos de inversion.
+\end{itemize}
+
+\subsection{Implementaci\'on}
+Se abordaron tres problemas de inversión, cada uno con sus respectivas limitaciones. En los tres casos se establecieron límites para todos los instrumentos de inversión en el intervalo \([0, 10]\). 
+
+En el primer problema, se buscó maximizar el beneficio del portafolio, es decir, maximizar la tasa de retorno. En el segundo problema, el objetivo fue minimizar la varianza del portafolio, manteniendo una ganancia mínima del \(35\%\); por lo tanto, se incorporó esta restricción al modelo. Finalmente, en el tercer problema se volvió a buscar la maximización de la tasa de retorno del portafolio, pero añadiendo la restricción de considerar un riesgo menor al \(20\%\).
+
+\section{M\'odulos del Algoritmo Gen\'etico}
+
+El n\'ucleo del algoritmo gen\'etico se distribuye en varios m\'odulos:
+
+\subsection{Inicializaci\'on}
+\textbf{Funci\'on}: \texttt{initialize\_population}  
+\textbf{Ubicaci\'on}: \texttt{libs/auxiliaries\_functions.py}  
+\textbf{Descripci\'on}: Genera la poblaci\'on inicial de manera uniforme en el espacio de b\'usqueda.
+
+\subsection{Selecci\'on}
+\textbf{Funci\'on}: \texttt{vectorized\_tournament\_selection}  
+\textbf{Ubicaci\'on}: \texttt{libs/selection.py}  
+\textbf{Descripci\'on}: Se usa un enfoque de torneos para la selecci\'on de padres, empleando operaciones vectorizadas con NumPy.
+
+\subsection{Cruzamiento}
+\textbf{Funciones}: \texttt{sbx\_crossover}, \texttt{sbx\_crossover\_with\_boundaries}  
+\textbf{Ubicaci\'on}: \texttt{libs/crossover.py}  
+\textbf{Descripci\'on}: Implementa el operador SBX (Simulated Binary Crossover) con y sin control de l\'imites.
+
+\subsection{Mutaci\'on}
+\textbf{Funciones}: \texttt{polynomial\_mutation}, \texttt{polynomial\_mutation\_with\_boundaries}  
+\textbf{Ubicaci\'on}: \texttt{libs/mutation.py}  
+\textbf{Descripci\'on}: Aplica mutaci\'on polinomial, con control opcional de l\'imites para mantener la viabilidad de las soluciones.
+
+\subsection{Aplicacion de Restricciones}
+\textbf{Función}: \texttt{evaluate\_individuals\_with\_constraints} 
+\textbf{Ubicaci\'on}: \texttt{libs/auxiliaries\_functions.py}  
+\textbf{Descripción}: Verifica el cumplimiento de las restricciones impuestas por el problema. Cuando se violan restricciones, se aplica un mecanismo de penalización para ajustar el valor del fitness, de modo que las soluciones inviables tengan menor probabilidad de ser seleccionadas.
+
+\subsection{Ejecuci\'on del Algoritmo}
+\textbf{Funci\'on}: \texttt{genetic\_algorithm}  
+\textbf{Ubicaci\'on}: \texttt{AG.py}  
+\textbf{Descripci\'on}: Gestiona el ciclo evolutivo completo del algoritmo gen\'etico.
+
+\section{Visualizaci\'on y Almacenamiento}
+
+\subsection{Visualizaci\'on}
+\textbf{M\'odulo}: \texttt{libs/plot.py}  
+\textbf{Funciones}: \texttt{plot\_evolucion\_fitness}, \texttt{plot\_surface\_3d}  
+\textbf{Descripci\'on}: Permite analizar la evoluci\'on del fitness y visualizar la superficie de las funciones objetivo.
+
+\subsection{Almacenamiento}
+\textbf{Estructura de Carpetas}:
+\begin{itemize}
+    \item Directorio \texttt{outputs} organizado en subcarpetas por problema.
+    \item Historiales en archivos CSV con datos de fitness y variables.
+    \item Res\'umenes estad\'isticos de cada corrida.
+\end{itemize}
+
+\textbf{Integraci\'on}: \texttt{main\_script.py} ejecuta el algoritmo para cada funci\'on definida en \texttt{AG\_confs.py}.
+
+\textbf{Escalabilidad}: La arquitectura modular permite agregar nuevas funciones objetivo y modificar operadores gen\'eticos sin afectar la estructura base.

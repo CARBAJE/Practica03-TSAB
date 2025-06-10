@@ -1,0 +1,250 @@
+\documentclass{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{lipsum}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[fleqn]{mathtools}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb} % Para los símbolos de conjuntos de números
+\usepackage{latexsym}
+\usepackage{nccmath}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{tasks}
+\usepackage{color}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage[parfill]{parskip}
+\usepackage{lipsum}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}% Para manejar enlaces
+\usepackage{fancyhdr}
+\usepackage{chappg}
+\usepackage{adjustbox}
+\usepackage{tocloft}
+\usepackage{soul}
+\usepackage{pgffor}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+%Definicion de colores
+\definecolor{colorIPN}{rgb}{0.5, 0.0,0.13}
+\definecolor{colorESCOM}{rgb}{0.0, 0.5,1.0}
+\definecolor{myorange}{RGB}{255, 204, 153}
+\graphicspath{ {imagenes/} }
+%Configuraciones extras de colores
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codered}{rgb}{0.6,0,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Configuración de la portada
+\titleformat{\section}[block]{\normalfont\huge\bfseries}{\thesection}{1em}{}
+\geometry{a4paper, margin=1in}
+
+% Definir comandos para información repetitiva
+\newcommand{\logoInstitucion}{recursos/logotipo_ipn.png} % Reemplaza con el nombre del archivo de tu logo
+\newcommand{\logoUniversidad}{recursos/EscudoESCOM.png} % Reemplaza con el nombre del archivo de tu logo
+\newcommand{\nombreInstituto}{Instituto Politecnico Nacional}
+\newcommand{\facultad}{Escuela Superior de Computo}
+\newcommand{\materia}{Tópicos Selectos de Algoritmos Bioinspirados}
+\newcommand{\grupo}{7BM1}
+\newcommand{\profesora}{Daniel Molina Pérez}
+\newcommand{\periodo}{2025/02}
+
+\newcommand{\alumnoA}{Carrillo Barreiro José Emiliano}
+\newcommand{\alumnoB}{Martinez Ayala Gerardo}
+\newcommand{\alumnoC}{Robles Otero José Ángel}
+\newcommand{\alumnoD}{Vásquez Morales Haniel Ulises}
+\newcommand{\alumnos}{Carrillo J., Martinez G., Robles J. \& Vásquez H.}
+
+% Definir nuevas listas para información repetitiva
+\newlist{bracketed}{enumerate}{1}
+\setlist[bracketed,1]{label={[{\arabic*}]},left=0pt}
+
+% Configuración del encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{} % Limpia todos los campos
+
+% Encabezado
+\fancyhead[C]{\textbf{\nombreInstituto\\ \facultad}}
+\fancyhead[L]{\includegraphics[width=1cm]{recursos/logotipo_ipn.png}}
+\fancyhead[R]{\includegraphics[width=1.5cm]{recursos/EscudoESCOM.png}}
+
+% Pie de página
+\fancyfoot[C]{\materia||\grupo\\ \alumnos\\ \thepage}
+% Configuración del grosor de la línea en el encabezado y pie de página
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Ajuste del tamaño del encabezado
+\setlength{\headheight}{34.0845pt}
+\addtolength{\topmargin}{-22.0845pt}
+
+\fancypagestyle{plain}{%
+    \fancyhf{} % Borra encabezado y pie de página por defecto
+    \fancyhead[C]{\textbf{\nombreInstituto\\ \facultad}}
+    \fancyhead[L]{\includegraphics[width=1cm]{recursos/logotipo_ipn.png}}
+    \fancyhead[R]{\includegraphics[width=1.5cm]{recursos/EscudoESCOM.png}}
+    \fancyfoot[C]{\materia||\grupo\\ \alumnos\\ \thepage}
+    \renewcommand{\headrulewidth}{0.4pt}
+    \renewcommand{\footrulewidth}{0.4pt}
+}
+
+
+% Configuración de lstlisting para Python
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codered},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstdefinestyle{custompython}{
+    language=Python,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue},
+    stringstyle=\color{green},
+    commentstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{white},
+    frame=single,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    morekeywords={import,plt,np,ws,y,gradient}
+}
+
+% Definición de estilo para C++
+\lstdefinestyle{cppstyle}{
+    language=C++,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{orange},
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=5pt,
+    frame=single,
+    captionpos=b,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=0.5cm,
+    xrightmargin=0.5cm
+}
+
+% Definición de estilo para MATLAB
+\lstdefinestyle{matlabstyle}{
+    language=Matlab,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{purple!50!blue!50!white},
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=5pt,
+    frame=single,
+    captionpos=b,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=0.5cm,
+    xrightmargin=0.5cm
+}
+
+%Definicion de estilo para Python
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{red!80!black},
+    commentstyle=\color{gray!40!white},
+    stringstyle=\color{yellow!30!orange!80!white},
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=5pt,
+    frame=single,
+    captionpos=b,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=0.5cm,
+    xrightmargin=0.5cm
+}
+
+% Personalización del índice de listados
+\newcommand{\listcppname}{Índice de Listados de C++}
+\newcommand{\listmatlabname}{Índice de Listados de MATLAB}
+\newcommand{\listpythonname}{Índice de Listados de Python}
+\newlistof{cpplistings}{lolcpp}{\listcppname}
+\newlistof{matlablistings}{lolmatlab}{\listmatlabname}
+\newlistof{pythonlistings}{lolpython}{\listpythonname}
+
+% Configuración para los listados de C++
+\lstset{style=cppstyle}
+\newcommand{\cpplisting}[1]{%
+    \refstepcounter{cpplistings}%
+    \addcontentsline{lolcpp}{cpplistings}{\protect\numberline{\thecpplistings}#1}\par}
+
+% Configuración para los listados de MATLAB
+\lstset{style=matlabstyle}
+\newcommand{\matlablisting}[1]{%
+    \refstepcounter{matlablistings}%
+    \addcontentsline{lolmatlab}{matlablistings}{\protect\numberline{\thematlablistings}#1}\par}
+
+% Configuración para los listados de Python
+\lstset{style=pythonstyle}
+\newcommand{\pythonlisting}[1]{%
+    \refstepcounter{pythonlistings}%
+    \addcontentsline{lolpython}{pythonlistings}{\protect\numberline{\thepythonlistings}#1}\par}
+
+\begin{document}
+
+% Portada
+\input{secciones/portada.tex}
+
+% Índice
+\input{secciones/indices.tex}
+
+%Capitulos
+\input{secciones/introduccion.tex}
+\input{secciones/objetivos.tex}
+\input{secciones/Metodologia.tex}
+\input{secciones/Resultados.tex}
+\input{secciones/Implementacion.tex}
+\input{secciones/conclusiones.tex}
+\input{secciones/anexos.tex}
+
+\end{document}

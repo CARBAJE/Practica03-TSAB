@@ -1,0 +1,273 @@
+\chapter{Metodolog\'ia}
+
+\section{Inicializaci\'on de la Poblaci\'on}
+La poblaci\'on inicial se genera de forma uniforme a lo largo del espacio de b\'usqueda, definido por l\'imites inferiores y superiores para cada variable.
+
+\subsection*{Objetivo}
+Garantizar que la b\'usqueda comience explorando de manera equitativa todas las regiones posibles, evitando sesgos que puedan limitar la diversidad de soluciones iniciales.
+
+\subsection*{Implementaci\'on}
+Se utiliza la funci\'on \texttt{initialize\_population}, la cual emplea m\'etodos de generaci\'on aleatoria (por ejemplo, la funci\'on \texttt{np.random.uniform} de NumPy) para crear un conjunto de individuos.
+
+\subsection*{Ventajas}
+\begin{itemize}
+    \item Permite cubrir todo el rango definido para cada variable.
+    \item Aumenta la probabilidad de encontrar regiones prometedoras del espacio de soluciones desde el inicio.
+\end{itemize}
+
+\section{Evaluación de Fitness}
+
+Cada individuo generado se evalúa mediante una función objetivo, la cual cuantifica la calidad de la solución propuesta. A continuación, se describen las funciones objetivo y las restricciones empleadas para cada problema abordado:
+
+\subsection*{Funciones Utilizadas por Problema}
+
+\begin{itemize}
+    \item \textbf{Problema 1: Optimización de Ganancias}
+    \begin{itemize}
+        \item \textbf{Función Objetivo ($f_{\text{finanzas}}(x)$)}: El objetivo es maximizar las ganancias, calculado como una combinación lineal de las variables de decisión ($x$), ponderadas por los siguientes coeficientes: 0.2, 0.42, 1, 0.5, 0.46 y 0.3 para $x_0$ a $x_5$ respectivamente. Matemáticamente, se expresa como:
+        \[
+        f_{\text{finanzas}}(x) = -(0.2x_0 + 0.42x_1 + 1x_2 + 0.5x_3 + 0.46x_4 + 0.3x_5)
+        \]
+        El signo negativo indica que, aunque la función se define para minimizar, en este contexto buscamos maximizar las ganancias, por lo que el algoritmo de optimización buscará minimizar el negativo de esta función.
+
+        \item \textbf{Restricción de Igualdad ($h_1(x)$)}: Se impone una restricción de igualdad que requiere que la suma de todas las variables de decisión sea igual a 1:
+        \[
+        h_1(x) = 1 - \sum_{i=0}^{5} x_i = 0
+        \]
+
+        \item \textbf{Función Secundaria Monitoreada ($f_{\text{riesgos}}(x)$)}: Adicionalmente, se monitorea la función de riesgos, aunque no se utiliza directamente en la evaluación de fitness para este problema. Esta función se calcula como:
+        \[
+        f_{\text{riesgos}}(x) = x^T \Sigma x
+        \]
+        donde $\Sigma$ representa la matriz de covarianza de los activos.
+    \end{itemize}
+
+    \item \textbf{Problema 2: Minimización de Riesgos}
+    \begin{itemize}
+        \item \textbf{Función Objetivo ($f_{\text{riesgos}}(x)$)}: El objetivo principal es minimizar el riesgo, calculado mediante la siguiente función cuadrática:
+        \[
+        f_{\text{riesgos}}(x) = x^T \Sigma x
+        \]
+        donde $\Sigma$ es la matriz de covarianza de los activos y $x$ es el vector de las variables de decisión.
+
+        \item \textbf{Restricción de Desigualdad ($g_1(x)$)}: Se establece una restricción de desigualdad que limita la ganancia mínima aceptable:
+        \[
+        g_1(x) = 0.35 + f_{\text{finanzas}}(x) \leq 0
+        \]
+        donde
+        \[
+        f_{\text{finanzas}}(x) = -(0.2x_0 + 0.42x_1 + 1x_2 + 0.5x_3 + 0.46x_4 + 0.3x_5)
+        \]
+
+        \item \textbf{Restricción de Igualdad ($h_1(x)$)}: Al igual que en el Problema 1, se aplica la restricción de igualdad:
+        \[
+        h_1(x) = 1 - \sum_{i=0}^{5} x_i = 0
+        \]
+
+        \item \textbf{Función Secundaria Monitoreada ($f_{\text{finanzas}}(x)$)}: Se realiza un seguimiento de la función de ganancias para este problema, aunque no influye directamente en la optimización del riesgo.
+    \end{itemize}
+
+    \item \textbf{Problema 3: Optimización de Ganancias con Restricción de Riesgo}
+    \begin{itemize}
+        \item \textbf{Función Objetivo ($f_{\text{finanzas}}(x)$)}: Similar al Problema 1, el objetivo es maximizar las ganancias:
+        \[
+        f_{\text{finanzas}}(x) = -(0.2x_0 + 0.42x_1 + 1x_2 + 0.5x_3 + 0.46x_4 + 0.3x_5)
+        \]
+
+        \item \textbf{Restricción de Desigualdad ($g_2(x)$)}: Se introduce una restricción de desigualdad que establece un límite superior para el riesgo:
+        \[
+        g_2(x) = 0.2 - x^T \Sigma x \leq 0
+        \]
+
+        \item \textbf{Restricción de Igualdad ($h_1(x)$)}: Se mantiene la restricción de que la suma de las variables de decisión debe ser igual a 1:
+        \[
+        h_1(x) = 1 - \sum_{i=0}^{5} x_i = 0
+        \]
+
+        \item \textbf{Función Secundaria Monitoreada ($f_{\text{riesgos}}(x)$)}: Se observa la función de riesgos como una métrica secundaria para este problema.
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Proceso}
+Se calcula el valor de fitness para cada individuo (por ejemplo, evaluando $f(x_1, x_2)$) y se almacena dicho valor para posteriores comparaciones.
+
+\subsection*{Importancia}
+La evaluaci\'on correcta del fitness es crucial, ya que determina la selecci\'on de individuos y, por ende, el rumbo de la evoluci\'on poblacional.
+
+\section{Selecci\'on por Torneo}
+
+Para elegir los padres que generar\'an la siguiente generaci\'on se utiliza un m\'etodo de selecci\'on por torneo.
+
+\subsection*{Mecanismo}
+\begin{itemize}
+    \item Se forman m\'ultiples grupos (torneos) de individuos seleccionados al azar.
+    \item En cada grupo se compara el fitness de los participantes y se selecciona al individuo con el mejor desempe\~no.
+\end{itemize}
+
+\subsection*{Implementaci\'on Vectorizada}
+La funci\'on \texttt{vectorized\_tournament\_selection} realiza este proceso de forma eficiente, aprovechando operaciones vectorizadas de NumPy.
+
+\subsection*{Beneficios}
+\begin{itemize}
+    \item Favorece la selecci\'on de soluciones de alta calidad sin descartar por completo la diversidad poblacional.
+    \item Permite controlar la presi\'on selectiva mediante el tama\~no del torneo.
+\end{itemize}
+
+\section{Cruzamiento con SBX}
+
+El operador de cruzamiento se implementa mediante el m\'etodo SBX (Simulated Binary Crossover).
+
+\subsection*{Proceso del SBX}
+\begin{itemize}
+    \item A partir de dos padres, se genera un n\'umero aleatorio $u$ y se calcula un par\'ametro $\beta$ que determina la dispersi\'on de los descendientes respecto a los padres.
+    \item Se generan dos hijos combinando linealmente los valores de los padres.
+\end{itemize}
+
+\subsection*{Ajuste de L\'imites}
+Se incorpora un mecanismo en \texttt{sbx\_crossover\_with\_boundaries} que garantiza que los hijos resultantes se mantengan dentro de los l\'imites predefinidos.
+
+\subsection*{Ventajas}
+\begin{itemize}
+    \item Promueve la creaci\'on de soluciones intermedias que pueden explotar la informaci\'on gen\'etica de ambos padres.
+    \item Ayuda a preservar la diversidad en la poblaci\'on.
+\end{itemize}
+
+\section{Mutaci\'on Polinomial}
+
+Para introducir variabilidad y explorar nuevas regiones del espacio de b\'usqueda, se aplica la mutaci\'on polinomial.
+
+\subsection*{Mecanismo de la Mutaci\'on}
+\begin{itemize}
+    \item Cada gen de un individuo tiene una probabilidad definida de sufrir una mutaci\'on.
+    \item Se usa una distribuci\'on polinomial, controlada por el par\'ametro $\eta_{\text{mut}}$.
+\end{itemize}
+
+\subsection*{Consideraciones de L\'imites}
+La mutaci\'on se aplica respetando los l\'imites definidos para cada variable mediante la funci\'on \texttt{polynomial\_mutation\_with\_boundaries}.
+
+\subsection*{Beneficios}
+\begin{itemize}
+    \item Introduce peque\~nas variaciones que pueden conducir a la exploraci\'on de nuevas soluciones.
+    \item Previene la convergencia prematura al mantener la diversidad gen\'etica.
+\end{itemize}
+
+\section{Elitismo y Ciclo Evolutivo}
+
+El proceso evolutivo se estructura en ciclos o generaciones.
+
+\subsection*{Elitismo}
+\begin{itemize}
+    \item Se retiene el mejor individuo de la generaci\'on actual y se garantiza su inclusi\'on en la siguiente generaci\'on.
+    \item Esto asegura que la calidad de la soluci\'on nunca empeore a lo largo de las generaciones.
+\end{itemize}
+
+\subsection*{Ciclo Evolutivo}
+\begin{itemize}
+    \item Cada generaci\'on incluye la selecci\'on, el cruzamiento, la mutaci\'on y la incorporaci\'on del individuo de \'elite.
+    \item La evoluci\'on se repite durante un n\'umero predefinido de generaciones.
+\end{itemize}
+
+\subsection*{Registro y An\'alisis}
+\begin{itemize}
+    \item Se almacena el historial del fitness y de las mejores soluciones.
+    \item Esto facilita el an\'alisis del comportamiento del algoritmo y la generaci\'on de visualizaciones.
+\end{itemize}
+
+\section{Penalización Exterior}
+
+Los métodos de penalización son técnicas para manejar restricciones en problemas de optimización. La idea principal es transformar un problema de optimización con restricciones en uno sin restricciones, modificando la función objetivo para penalizar las soluciones que no cumplen con las restricciones. En el método de penalización exterior, esto se logra agregando términos a la función objetivo que aumentan su valor cuando se violan las restricciones.
+
+La función objetivo modificada, denotada como \( F_P(x) \), se define como:
+
+\[
+F_P(x) = f(x) + \lambda P(x)
+\]
+
+Donde:
+
+\begin{itemize}
+    \item \( f(x) \) es la función objetivo original del problema.
+    \item \( P(x) \) es la función de penalización, que cuantifica la violación de las restricciones.
+    \item \( \lambda_P \) es el parámetro de penalización, que controla la severidad de la penalización.
+\end{itemize}
+
+La función de penalización \( P(x) \) se calcula de la siguiente manera:
+
+\[
+P(x) = \sum_{i=1}^{n} \max(0, g_i(x))^2 + \sum_{j=1}^{m} h_j(x)^2
+\]
+
+Donde:
+
+\begin{itemize}
+    \item \( g_i(x) \) representa la \( i \)-ésima restricción de desigualdad, de la forma \( g_i(x) \leq 0 \).
+    \item \( h_j(x) \) representa la \( j \)-ésima restricción de igualdad, de la forma \( h_j(x) = 0 \).
+\end{itemize}
+
+\subsection*{Funcionamiento de la Penalización Exterior}
+
+\begin{itemize}
+    \item Para las restricciones de desigualdad \( g_i(x) \leq 0 \):
+    \begin{itemize}
+        \item Si la restricción se cumple, \( \max(0, g_i(x)) = 0 \), por lo que no hay penalización.
+        \item Si la restricción se viola, \( \max(0, g_i(x)) = g_i(x) \), y se aplica una penalización proporcional al cuadrado de la violación.
+    \end{itemize}
+    \item Para las restricciones de igualdad \( h_j(x) = 0 \):
+    \begin{itemize}
+        \item Si la restricción se cumple, \( h_j{(x)}^2 = 0 \), y no hay penalización.
+        \item Si la restricción no se cumple, \( h_j{(x)}^2 > 0 \), y se aplica una penalización proporcional al cuadrado de la diferencia.
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Ventajas}
+
+\begin{itemize}
+    \item \textbf{Facilidad de implementación:} Es relativamente sencillo agregar la penalización externa a los algoritmos de optimización existentes.
+    \item \textbf{Flexibilidad:} Permite explorar soluciones que violan las restricciones, lo cual puede ser útil en problemas complejos.
+\end{itemize}
+
+\subsection*{Desventajas}
+
+\begin{itemize}
+    \item \textbf{Distorsión de la solución óptima:} La penalización puede llevar a soluciones subóptimas si se priorizan soluciones que violan las restricciones pero tienen un mejor valor de la función objetivo.
+    \item \textbf{Sensibilidad al parámetro de penalización:} La elección del valor de \( \lambda_P \) es crucial. Si es muy pequeño, las restricciones pueden no cumplirse; si es muy grande, puede dificultar la convergencia.
+    \item \textbf{Convergencia:} Puede causar una convergencia lenta o incluso la no convergencia del algoritmo.
+\end{itemize}
+
+\section{Configuración de Hiperparámetros}
+En este apartado se detallan los valores de los principales hiperparámetros del algoritmo evolutivo, así como la razón de diseño detrás de cada uno.
+
+\subsection{Lista de Hiperparámetros}
+
+\begin{table}[H]
+\centering
+\caption{Hiperparámetros utilizados y su justificación}
+\begin{tabular}{llp{8cm}}
+\toprule
+\textbf{Hiperparámetro} & \textbf{Valor} & \textbf{Justificación} \\
+\midrule
+\texttt{POP\_SIZE}           & 1100                & Tamaño amplio que garantiza diversidad y buena cobertura del espacio de búsqueda. \\
+\texttt{NUM\_GENERATIONS}    & 1500                & Número de iteraciones suficiente para converger sin excesivo costo computacional. \\
+\texttt{NUM\_RUNS}           & 5                   & Varias ejecuciones independientes para evaluar robustez y consistencia de resultados. \\
+\texttt{TOURNAMENT\_SIZE}     & 3                   & Presión selectiva moderada, evitando convergencia prematura y manteniendo diversidad. \\
+\texttt{CROSSOVER\_PROB}      & 0.9                 & Alta frecuencia de recombinación para explorar combinaciones de genes de padres. \\
+\texttt{ETA\_C}               & 0.001               & Índice de distribución bajo en SBX para generar descendientes cercanos (explotación fina). \\
+\texttt{MUTATION\_PROB}       & $1/10$              & Probabilidad de mutar cada gen que introduce variabilidad controlada. \\
+\texttt{ETA\_MUT}             & 0.0001              & Índice de distribución bajo en mutación polinomial para pequeños ajustes locales. \\
+\texttt{LB}, \texttt{UB}      & [0.0,\,0.4]         & Límites de búsqueda basados en proporciones factibles de asignación de recursos. \\
+\texttt{LAMBDA}               & $1\times10^2$       & Coeficiente de penalización equilibrado para manejar violaciones de restricciones. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+\subsection{Criterios de Selección}
+La elección de estos valores se fundamenta en:
+
+\begin{itemize}
+  \item \textbf{Diversidad vs. Convergencia:} Un \texttt{POP\_SIZE} elevado y un \texttt{TOURNAMENT\_SIZE} moderado mantienen un buen equilibrio entre exploración y explotación.
+  \item \textbf{Profundidad de Búsqueda:} Un número alto de generaciones (\texttt{NUM\_GENERATIONS}) permite que la población evolucione lo suficiente para afinar soluciones.
+  \item \textbf{Variabilidad Controlada:} Altas probabilidades de cruzamiento (\texttt{CROSSOVER\_PROB}) y tasas de mutación moderadas (\texttt{MUTATION\_PROB}, \texttt{ETA\_MUT}) aseguran exploración sin destruir buenas soluciones.
+  \item \textbf{Manejo de Restricciones:} El coeficiente de penalización (\texttt{LAMBDA}) se calibró para penalizar con fuerza las violaciones sin bloquear la búsqueda en zonas viables.
+\end{itemize}

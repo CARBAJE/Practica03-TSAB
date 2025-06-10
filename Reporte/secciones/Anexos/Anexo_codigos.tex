@@ -1,0 +1,589 @@
+funcion\chapter{Scripts}
+
+\section{Archivo \texttt{main.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{main.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import os
+import pandas as pd
+from AG_confs import *
+
+from AG import genetic_algorithm
+from libs.plot import *
+
+def main():
+    # Crear carpetas de salida generales
+    os.makedirs("outputs", exist_ok=True)
+    
+    for func_key, func_data in FUNCTIONS.items():
+        f_obj = func_data["func"]
+        lb = func_data["lb"]
+        ub = func_data["ub"]
+        func_name = func_data["name"]
+        num_runs = func_data["num_runs"]
+        
+        # Carpetas especificas de cada funcion
+        func_folder = f"outputs/{func_key}"
+        os.makedirs(func_folder, exist_ok=True)
+        hist_folder = os.path.join(func_folder, "historiales")
+        res_folder = os.path.join(func_folder, "resumenes")
+        os.makedirs(hist_folder, exist_ok=True)
+        os.makedirs(res_folder, exist_ok=True)
+        
+        print(f"\n==============================================")
+        print(f"  FUNCIoN: {func_name}")
+        print(f"==============================================")
+        
+        all_runs_history = []
+        best_solutions_all_runs = []  # Guardaremos los mejores individuos (x1, x2) de cada corrida
+        best_values_across_runs = []  # Guardaremos el best_val (fitness) de cada corrida
+        
+        for run in range(num_runs):
+            print(f"\nEjecucion {run+1}/{num_runs}")
+            
+            (best_sol, best_val,
+             worst_sol, worst_val,
+             avg_sol,  avg_val,
+             std_val,
+             best_fitness_history,
+             best_x1_history,
+             best_x2_history,
+             population_final,
+             fitness_final,
+             best_solutions_over_time) = genetic_algorithm(
+                 f_obj, lb, ub,
+                 pop_size=POP_SIZE,
+                 num_generations=NUM_GENERATIONS,
+                 tournament_size=TOURNAMENT_SIZE,
+                 crossover_prob=CROSSOVER_PROB,
+                 eta_c=ETA_C,
+                 mutation_prob=MUTATION_PROB,
+                 eta_mut=ETA_MUT
+             )
+            
+            # 1) Guardar historial
+            df_historial = pd.DataFrame({
+                "Generacion": np.arange(1, NUM_GENERATIONS + 1),
+                "Mejor x1": best_x1_history,
+                "Mejor x2": best_x2_history,
+                "Mejor Fitness": best_fitness_history
+            })
+            historial_filename = os.path.join(hist_folder, f"historial_run_{run+1}.csv")
+            df_historial.to_csv(historial_filename, index=False)
+            
+            # 2) Guardar resumen de la corrida
+            data_resumen = [
+                ["Mejor", best_sol[0], best_sol[1], best_val],
+                ["Media", avg_sol[0], avg_sol[1], avg_val],
+                ["Peor", worst_sol[0], worst_sol[1], worst_val],
+                ["Desv. estandar", np.nan, np.nan, std_val]
+            ]
+            df_resumen = pd.DataFrame(data_resumen, columns=["Indicador", "x1", "x2", "Fitness"])
+            resumen_filename = os.path.join(res_folder, f"resumen_run_{run+1}.csv")
+            df_resumen.to_csv(resumen_filename, index=False)
+            
+            print(df_resumen.to_string(index=False))
+            
+            all_runs_history.append(best_fitness_history)
+            best_solutions_all_runs.append(best_sol)
+            best_values_across_runs.append(best_val)
+        
+        # ===========================================
+        #       RESUMEN GLOBAL DE LAS CORRIDAS
+        # ===========================================
+        best_values_arr = np.array(best_values_across_runs)
+        solutions_arr = np.array(best_solutions_all_runs)  # Cada fila: [x1, x2] del mejor individuo de cada corrida
+        
+        # Para el "Mejor" y "Peor", buscamos el indice de la corrida con minimo y maximo fitness
+        min_index = np.argmin(best_values_arr)
+        max_index = np.argmax(best_values_arr)
+        
+        data_global = [
+            ["Mejor (Fitness)", solutions_arr[min_index, 0], solutions_arr[min_index, 1], best_values_arr[min_index]],
+            ["Peor (Fitness)", solutions_arr[max_index, 0], solutions_arr[max_index, 1], best_values_arr[max_index]],
+            ["Media", np.mean(solutions_arr[:, 0]), np.mean(solutions_arr[:, 1]), np.mean(best_values_arr)],
+            ["Desv. Estandar", np.std(solutions_arr[:, 0]), np.std(solutions_arr[:, 1]), np.std(best_values_arr)]
+        ]
+        df_global = pd.DataFrame(data_global, columns=["Indicador", "x1", "x2", "Fitness"])
+        
+        global_filename = os.path.join(res_folder, "resumen_global_corridas.csv")
+        df_global.to_csv(global_filename, index=False)
+        
+        # (Opcional) Graficar evolucion del fitness de todas las corridas
+        plot_evolucion_fitness(all_runs_history, func_key, func_name)
+        
+        # (Opcional) Graficar superficie 3D si la funcion es de 2 variables
+        if len(lb) == 2:
+            plot_surface_3d(f_obj, lb, ub, best_solutions_all_runs, func_key, func_name)
+
+if __name__ == "__main__":
+    main()
+
+\end{lstlisting}
+
+\section{Archivo \texttt{AG\_confs.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{AG\_confs.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import numpy as np
+from libs.functions import langermann, drop_wave
+# ---------------------------
+# Parametros del algoritmo
+# ---------------------------
+POP_SIZE = 100            # Numero de individuos en la poblacion
+NUM_GENERATIONS = 200     # Numero de generaciones
+NUM_RUNS = 10             # Numero de ejecuciones completas (ciclos)
+
+# Parametros de la funcion de Langermann
+a = np.array([3, 5, 2, 1, 7])
+b = np.array([5, 2, 1, 4, 9])
+c = np.array([1, 2, 5, 2, 3])
+
+# Parametros del torneo
+TOURNAMENT_SIZE = 3  # Numero de individuos participantes en cada torneo
+
+# Parametros del cruzamiento SBX
+CROSSOVER_PROB = 0.9  # Probabilidad de aplicar cruzamiento
+ETA_C = 15            # indice de distribucion para SBX
+
+# Parametros de la mutacion polinomial
+MUTATION_PROB = 10.0 / 2  # Probabilidad de mutar cada gen
+ETA_MUT = 20              # indice de distribucion para mutacion polinomial
+
+best_solutions_list = [] 
+all_runs_history = []  # Para graficar luego
+
+FUNCTIONS = {
+    "langermann": {
+        "func": langermann,
+        "lb": np.array([0, 0]),
+        "ub": np.array([10, 10]),
+        "name": "Langermann",
+        "num_runs": NUM_RUNS
+    },
+    "drop_wave": {
+        "func": drop_wave,
+        "lb": np.array([-5.12, -5.12]),
+        "ub": np.array([5.12, 5.12]),
+        "name": "Drop-Wave",
+        "num_runs": NUM_RUNS
+    }
+}
+\end{lstlisting}
+
+\section{Archivo \texttt{AG.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{AG.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+from AG_confs import *
+from libs.selection import vectorized_tournament_selection
+from libs.crossover import sbx_crossover_with_boundaries
+from libs.mutation import polynomial_mutation_with_boundaries
+from libs.auxiliaries_functions import initialize_population
+
+
+# ---------------------------
+# Funcion principal del GA
+# ---------------------------
+def genetic_algorithm(objective_func, lower_bound, upper_bound,
+                      pop_size=POP_SIZE, num_generations=NUM_GENERATIONS,
+                      tournament_size=TOURNAMENT_SIZE,
+                      crossover_prob=CROSSOVER_PROB, eta_c=ETA_C,
+                      mutation_prob=MUTATION_PROB, eta_mut=ETA_MUT):
+    """
+    Ejecuta el GA para la funcion objetivo dada y retorna:
+      - best_solution, best_value
+      - worst_solution, worst_value
+      - avg_solution, avg_value
+      - std_value (fitness)
+      - best_fitness_history, best_x1_history, best_x2_history
+      - population (final), fitness (final)
+      - best_solutions_over_time (para animaciones)
+    """
+    num_variables = len(lower_bound)
+    
+    # 1) Inicializar poblacion
+    population = initialize_population(pop_size, num_variables, lower_bound, upper_bound)
+    fitness = np.array([objective_func(ind) for ind in population])
+    
+    best_fitness_history = []
+    best_x1_history = []
+    best_x2_history = []
+    
+    # Para animacion: almacenamos el mejor (x1, x2) en cada generacion
+    best_solutions_over_time = np.zeros((num_generations, num_variables))
+    
+    for gen in range(num_generations):
+        # Elitismo: guardar el mejor de la generacion actual
+        best_index = np.argmin(fitness)
+        best_fitness = fitness[best_index]
+        elite = population[best_index].copy()
+        
+        best_fitness_history.append(best_fitness)
+        best_x1_history.append(elite[0])
+        best_x2_history.append(elite[1])
+        best_solutions_over_time[gen, :] = elite
+        
+        new_population = []
+        
+        # Numero de padres necesarios (2 por cada par a generar)
+        num_parents_needed = 2 * (pop_size - 1)
+        winners, _ = vectorized_tournament_selection(fitness, num_parents_needed,
+                                                     tournament_size, len(population),
+                                                     unique_in_column=True, unique_in_row=False)
+        
+        # Generar un valor global para el crossover y otro para la mutacion (para toda la generacion)
+        global_u = np.random.rand()
+        global_r = np.random.rand()
+        
+        # Generar nueva poblacion
+        for i in range(0, len(winners), 2):
+            parent1 = population[winners[i]].copy()
+            if i + 1 < len(winners):
+                parent2 = population[winners[i+1]].copy()
+            else:
+                parent2 = parent1.copy()
+            
+            # Cruzamiento SBX usando el mismo u para todas las variables del cruce
+            child1, child2 = sbx_crossover_with_boundaries(
+                parent1, parent2, lower_bound, upper_bound,
+                eta_c, crossover_prob, use_global_u=True, global_u=global_u
+            )
+            # Mutacion polinomial usando el mismo r para todas las variables del individuo
+            child1 = polynomial_mutation_with_boundaries(
+                child1, lower_bound, upper_bound,
+                mutation_prob, eta_mut, use_global_r=True, global_r=global_r
+            )
+            child2 = polynomial_mutation_with_boundaries(
+                child2, lower_bound, upper_bound,
+                mutation_prob, eta_mut, use_global_r=True, global_r=global_r
+            )
+            
+            new_population.append(child1)
+            if len(new_population) < pop_size - 1:
+                new_population.append(child2)
+        
+        # Convertir a array y evaluar el fitness de la nueva poblacion
+        new_population = np.array(new_population)
+        new_fitness = np.array([objective_func(ind) for ind in new_population])
+        
+        # Incorporar el individuo elite (elitismo)
+        new_population = np.vstack([new_population, elite])
+        new_fitness = np.append(new_fitness, best_fitness)
+        
+        # Actualizar la poblacion y su fitness para la siguiente generacion
+        population = new_population.copy()
+        fitness = new_fitness.copy()
+    
+    # Calcular estadisticas finales
+    best_index = np.argmin(fitness)
+    worst_index = np.argmax(fitness)
+    best_solution = population[best_index]
+    best_value = fitness[best_index]
+    worst_solution = population[worst_index]
+    worst_value = fitness[worst_index]
+    avg_solution = np.mean(population, axis=0)
+    avg_value = np.mean(fitness)
+    std_value = np.std(fitness)
+    
+    return (best_solution, best_value,
+            worst_solution, worst_value,
+            avg_solution, avg_value,
+            std_value,
+            best_fitness_history,
+            best_x1_history,
+            best_x2_history,
+            population,
+            fitness,
+            best_solutions_over_time)
+\end{lstlisting}
+
+\section{Archivo \texttt{selection.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{selection.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import numpy as np
+
+def vectorized_tournament_selection(fitness, num_tournaments, tournament_size, pop_size,
+                                    unique_in_column=True, unique_in_row=False):
+    """
+    Genera una matriz de torneos de forma vectorizada y retorna, para cada torneo,
+    el indice del individuo ganador (el de menor fitness).
+    
+    Args:
+      - fitness: array con los fitness de la poblacion (longitud = pop_size).
+      - num_tournaments: numero de torneos a realizar (por ejemplo, el numero total
+                         de selecciones de padres requeridas en la generacion).
+      - tournament_size: numero de individuos que participan en cada torneo.
+      - pop_size: tamano de la poblacion.
+      - unique_in_column: si True, para cada posicion (columna) se eligen candidatos sin
+                          repeticion entre torneos.
+      - unique_in_row: si True, en cada torneo (fila) los candidatos seran unicos.
+                    (Por defecto se permite repetir en la fila).
+    
+    Returns:
+      - winners: array de indices ganadores (uno por torneo).
+      - tournament_matrix: la matriz de candidatos (de tamano [num_tournaments x tournament_size]).
+    """
+    if unique_in_row:
+        # Para cada torneo (fila), muestreamos sin reemplazo (cada fila es unica)
+        tournament_matrix = np.array([np.random.choice(pop_size, size=tournament_size, replace=False)
+                                      for _ in range(num_tournaments)])
+    else:
+        # Permitir repeticion en la fila, pero controlar la no repeticion en cada columna
+        if unique_in_column:
+            # Para cada columna, se genera una permutacion de los indices (o se usan numeros aleatorios sin repeticion)
+            # Siempre que num_tournaments <= pop_size.
+            if num_tournaments > pop_size:
+                # Si se requieren mas torneos que individuos, se hace sin la restriccion por columna.
+                tournament_matrix = np.random.randint(0, pop_size, size=(num_tournaments, tournament_size))
+            else:
+                cols = []
+                for j in range(tournament_size):
+                    # Para la columna j, se toman num_tournaments indices sin repeticion
+                    perm = np.random.permutation(pop_size)
+                    cols.append(perm[:num_tournaments])
+                tournament_matrix = np.column_stack(cols)
+        else:
+            # Sin restricciones, se muestrea con reemplazo para cada candidato.
+            tournament_matrix = np.random.randint(0, pop_size, size=(num_tournaments, tournament_size))
+    
+    # Para cada torneo (fila de la matriz), se selecciona el candidato con el menor fitness.
+    winners = []
+    for row in tournament_matrix:
+        row_fitness = fitness[row]
+        winner_index = row[np.argmin(row_fitness)]
+        winners.append(winner_index)
+    winners = np.array(winners)
+    return winners, tournament_matrix
+\end{lstlisting}
+
+\section{Archivo \texttt{crossover.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{crossover.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import numpy as np
+
+def sbx_crossover(parent1, parent2, lower_bound, upper_bound, eta, crossover_prob):
+    """Realiza el cruzamiento SBX para dos padres y devuelve dos hijos."""
+    child1 = np.empty_like(parent1)
+    child2 = np.empty_like(parent2)
+    
+    if np.random.rand() <= crossover_prob:
+        for i in range(len(parent1)):
+            u = np.random.rand()
+            if u <= 0.5:
+                beta = (2*u)**(1/(eta+1))
+            else:
+                beta = (1/(2*(1-u)))**(1/(eta+1))
+            
+            # Genera los dos hijos
+            child1[i] = 0.5*((1+beta)*parent1[i] + (1-beta)*parent2[i])
+            child2[i] = 0.5*((1-beta)*parent1[i] + (1+beta)*parent2[i])
+            
+            # Asegurar que los hijos esten dentro de los limites
+            child1[i] = np.clip(child1[i], lower_bound[i], upper_bound[i])
+            child2[i] = np.clip(child2[i], lower_bound[i], upper_bound[i])
+    else:
+        child1 = parent1.copy()
+        child2 = parent2.copy()
+    
+    return child1, child2
+
+def sbx_crossover_with_boundaries(parent1, parent2, lower_bound, upper_bound,
+                                  eta, crossover_prob, use_global_u=False, global_u=None):
+    """
+    Realiza el cruzamiento SBX con limites, usando formulas que ajustan beta en funcion
+    de la cercania a las fronteras. Permite usar un unico 'u' global para todos los individuos 
+    de la generacion o, de forma estandar, un 'u' distinto por cada gen.
+    
+    Args:
+      - parent1, parent2: arrays con los padres.
+      - lower_bound, upper_bound: arrays con los limites inferiores y superiores.
+      - eta: indice de distribucion para SBX.
+      - crossover_prob: probabilidad de aplicar el cruce.
+      - use_global_u: si es True se utilizara el mismo valor de 'u' para todas las variables.
+      - global_u: valor de 'u' que se aplicara globalmente (si se proporciona).
+      
+    Returns:
+      - child1, child2: arrays con los hijos resultantes.
+    """
+    parent1 = np.asarray(parent1)
+    parent2 = np.asarray(parent2)
+    child1 = np.empty_like(parent1)
+    child2 = np.empty_like(parent2)
+    
+    # Si no se realiza el crossover, retornamos copias de los padres.
+    if np.random.rand() > crossover_prob:
+        return parent1.copy(), parent2.copy()
+    
+    # Si se quiere usar un 'u' global y no se ha pasado, se genera uno.
+    if use_global_u:
+        if global_u is None:
+            global_u = np.random.rand()
+    
+    for i in range(len(parent1)):
+        x1 = parent1[i]
+        x2 = parent2[i]
+        lb = lower_bound[i]
+        ub = upper_bound[i]
+        
+        # Aseguramos que x1 sea menor o igual que x2
+        if x1 > x2:
+            x1, x2 = x2, x1
+        
+        dist = x2 - x1
+        if dist < 1e-14:
+            child1[i] = x1
+            child2[i] = x2
+            continue
+        
+        # Calcular la minima distancia a las fronteras
+        min_val = min(x1 - lb, ub - x2)
+        if min_val < 0:
+            min_val = 0
+        
+        beta = 1.0 + (2.0 * min_val / dist)
+        alpha = 2.0 - beta**(-(eta+1))
+        
+        # Si se usa u global, se usa el mismo valor para cada variable
+        if use_global_u:
+            u = global_u
+        else:
+            u = np.random.rand()
+        
+        if u <= (1.0 / alpha):
+            betaq = (alpha * u)**(1.0/(eta+1))
+        else:
+            betaq = (1.0 / (2.0 - alpha*u))**(1.0/(eta+1))
+        
+        # Calcular los hijos
+        c1 = 0.5 * ((x1 + x2) - betaq * (x2 - x1))
+        c2 = 0.5 * ((x1 + x2) + betaq * (x2 - x1))
+        
+        # Ajustar a los limites
+        child1[i] = np.clip(c1, lb, ub)
+        child2[i] = np.clip(c2, lb, ub)
+    
+    return child1, child2
+\end{lstlisting}
+
+\section{Archivo \texttt{mutation.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{mutation.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import numpy as np
+
+def polynomial_mutation(child, lower_bound, upper_bound, mutation_prob, eta_mut):
+    """Aplica mutacion polinomial a un hijo."""
+    mutant = child.copy()
+    for i in range(len(child)):
+        if np.random.rand() < mutation_prob:
+            r = np.random.rand()
+            diff = upper_bound[i] - lower_bound[i]
+            if r < 0.5:
+                delta = (2*r)**(1/(eta_mut+1)) - 1
+            else:
+                delta = 1 - (2*(1-r))**(1/(eta_mut+1))
+            mutant[i] = child[i] + delta * diff
+            mutant[i] = np.clip(mutant[i], lower_bound[i], upper_bound[i])
+    return mutant
+
+
+def polynomial_mutation_with_boundaries(child, lower_bound, upper_bound,
+                                        mutation_prob, eta_mut,
+                                        use_global_r=False, global_r=None):
+    """
+    Aplica mutacion polinomial (con limites) a un vector 'child'.
+    Puede usar un unico 'r' global para todas las variables (si use_global_r=True)
+    o generar un 'r' distinto para cada variable.
+    
+    Args:
+      - child : array-like
+          Cromosoma (vector de decision) a mutar.
+      - lower_bound, upper_bound : array-like
+          Limites inferiores y superiores para cada variable.
+      - mutation_prob : float
+          Probabilidad de mutacion (en [0,1]) para cada variable.
+      - eta_mut : float
+          indice de distribucion para la mutacion.
+      - use_global_r : bool
+          Si True, se utiliza un unico valor 'r' para todas las variables.
+      - global_r : float, opcional
+          Valor de 'r' global a usar; si no se proporciona, se genera uno.
+    
+    Retutrns:
+      - mutant : np.ndarray
+          Nuevo vector mutado (manteniendo la dimension de 'child').
+    """
+    mutant = np.array(child, copy=True, dtype=float)
+    num_vars = len(child)
+    
+    # Si se desea usar un 'r' global y no se ha proporcionado, se genera uno una sola vez.
+    if use_global_r:
+        if global_r is None:
+            global_r = np.random.rand()
+    
+    for i in range(num_vars):
+        # Decidir si mutar esta variable
+        if np.random.rand() < mutation_prob:
+            x = mutant[i]
+            xl = lower_bound[i]
+            xu = upper_bound[i]
+            
+            # Evitar division por cero si los limites son casi iguales
+            if abs(xu - xl) < 1e-14:
+                continue
+
+            # d = distancia normalizada al limite mas cercano
+            d = min(xu - x, x - xl) / (xu - xl)
+            
+            # Elegir r: global o individual para cada variable
+            if use_global_r:
+                r = global_r
+            else:
+                r = np.random.rand()
+
+            nm = eta_mut + 1.0
+
+            # Calcular delta_q segun el valor de r
+            if r < 0.5:
+                bl = 2.0 * r + (1.0 - 2.0 * r) * ((1.0 - d) ** nm)
+                delta_q = (bl ** (1.0 / nm)) - 1.0
+            else:
+                bl = 2.0 * (1.0 - r) + 2.0 * (r - 0.5) * ((1.0 - d) ** nm)
+                delta_q = 1.0 - (bl ** (1.0 / nm))
+            
+            # Calcular la nueva posicion y asegurarse que este dentro de los limites
+            y = x + delta_q * (xu - xl)
+            mutant[i] = np.clip(y, xl, xu)
+    
+    return mutant
+\end{lstlisting}
+
+\section{Archivo \texttt{auxiliares\_functions.py}}
+\begin{lstlisting}[
+  caption={Implementación de \texttt{auxiliares\_functions.py}},
+  style=pythonstyle,
+  basicstyle=\ttfamily\footnotesize
+]
+import numpy as np
+# ---------------------------
+# Funciones auxiliares del GA
+# ---------------------------
+def initialize_population(pop_size, num_variables, lower_bound, upper_bound):
+    """Inicializa la poblacion uniformemente en el espacio de busqueda."""
+    return np.random.uniform(low=lower_bound, high=upper_bound, size=(pop_size, num_variables))
+\end{lstlisting}
