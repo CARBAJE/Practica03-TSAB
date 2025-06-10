@@ -1,70 +1,137 @@
 \chapter{Implementaci\'on}
-
-El proyecto se ha desarrollado siguiendo una arquitectura modular\footnote{Se puede encontrar el codigo perteneciente a cada funcion dentro de} que permite separar claramente las distintas funcionalidades y facilita tanto el mantenimiento como la ampliaci\'on futura. A continuaci\'on, se detallan los principales componentes y c\'omo se integran en el sistema:
-
-\section{Funciones Objetivo}
-
-\subsection{Descripci\'on}
-Las funciones objetivo definen el problema a optimizar. En este proyecto se incluyen dos funciones:
+El proyecto se ha desarrollado siguiendo una arquitectura modular que permite separar claramente las distintas funcionalidades relacionadas con el procesamiento de im\'agenes mediante aut\'omatas celulares. A continuaci\'on, se detallan los principales componentes te\'oricos e implementativos y c\'omo se integran en el sistema:
+\section{Fundamentos Te\'oricos}
+\subsection{Aut\'omatas Celulares y Regla 90R}
+El sistema implementa una variante de la Regla 90 de Wolfram, denominada Regla 90R (Reversible), que constituye un aut\'omata celular bidimensional con propiedades criptogr\'aficas. La regla opera sobre un arreglo binario donde cada celda evoluciona seg\'un la funci\'on:
+\begin{equation}
+C\'{i,j} = (C{i-1,j-1} + C_{i-1,j} + C_{i-1,j+1}) \bmod 2
+\end{equation}
+donde $C\'_{i,j}$ representa el estado futuro de la celda en la posici\'on $(i,j)$, y la suma se realiza m\'odulo 2 (operaci\'on XOR). La implementaci\'on utiliza \'indices alternos para garantizar la reversibilidad del proceso.
+\subsection{Representaci\'on Binaria de Im\'agenes}
+Las im\'agenes en escala de grises se transforman en arreglos binarios mediante el desempaquetado de bits (\texttt{np.unpackbits}), donde cada p\'ixel de 8 bits se convierte en 8 celdas binarias independientes. Esta representaci\'on permite la aplicaci\'on directa de operaciones de aut\'omatas celulares sobre los datos de imagen.
+\section{M\'odulos del Sistema}
+\subsection{Conversi\'on de Imagen}
+\textbf{Funciones}: \texttt{image_to_bit_array}, \texttt{bit_array_to_image}\
+\textbf{Ubicaci\'on}: Regi\'on de funciones de conversi\'on\
+\textbf{Descripci\'on}:
+La funci\'on \texttt{image_to_bit_array} realiza la transformaci\'on de imagen a representaci\'on binaria mediante:
+\begin{enumerate}
+\item Conversi\'on a escala de grises usando \texttt{PIL.Image.convert("L")}
+\item Transformaci\'on a arreglo NumPy con \texttt{np.array()}
+\item Desempaquetado de bits con \texttt{np.unpackbits(data, axis=1)}
+\item Retorno del arreglo binario y metadatos para reconstrucci\'on
+\end{enumerate}
+La funci\'on inversa \texttt{bit_array_to_image} reconstituye la imagen original:
+\begin{enumerate}
+\item Recorte del arreglo binario a las dimensiones originales
+\item Empaquetado de bits con \texttt{np.packbits(binary_array, axis=1)}
+\item Eliminaci\'on del padding generado durante el empaquetado
+\item Reconstrucci\'on de la imagen PIL en modo escala de grises
+\end{enumerate}
+\subsection{L\'ogica del Aut\'omata Celular}
+\subsubsection{Codificaci\'on}
+\textbf{Funci\'on}: \texttt{encode_rule_90R}\
+\textbf{Descripci\'on}: Implementa el algoritmo de codificaci\'on basado en la Regla 90R:
+\begin{algorithm}[H]
+\caption{Algoritmo de Codificaci\'on Regla 90R}
+\begin{algorithmic}[1]
+\FOR{$iter = 1$ \TO $iterations$}
+\STATE $new_bits \gets bits.copy()$
+\STATE $i_idx \gets {1, 3, 5, \ldots, rows-1}$ \COMMENT{\'Indices impares}
+\STATE Calcular vecindarios izquierdo y derecho
+\FOR{$i \in i_idx$}
+\STATE $new_bits[i, :] \gets (left[i, :] + bits[i-1, :] + right[i, :]) \bmod 2$
+\STATE $new_bits[i-1, :] \gets bits[i, :]$
+\ENDFOR
+\STATE $bits \gets new_bits$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+La implementaci\'on utiliza operaciones vectorizadas de NumPy para optimizar el rendimiento, procesando filas completas simult\'aneamente.
+\subsubsection{Decodificaci\'on}
+\textbf{Funci\'on}: \texttt{decode_rule_90R}\
+\textbf{Descripci\'on}: Implementa el proceso inverso de decodificaci\'on:
+\begin{algorithm}[H]
+\caption{Algoritmo de Decodificaci\'on Regla 90R}
+\begin{algorithmic}[1]
+\FOR{$iter = 1$ \TO $iterations$}
+\STATE $new_bits \gets bits.copy()$
+\STATE $i_idx \gets {0, 2, 4, \ldots, rows-2}$ \COMMENT{\'Indices pares}
+\STATE Calcular vecindarios izquierdo y derecho
+\FOR{$i \in i_idx$}
+\STATE $new_bits[i, :] \gets (left[i, :] + bits[i+1, :] + right[i, :]) \bmod 2$
+\STATE $new_bits[i+1, :] \gets bits[i, :]$
+\ENDFOR
+\STATE $bits \gets new_bits$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+\subsection{Interfaz Gr\'afica de Usuario}
+\subsubsection{Arquitectura de la GUI}
+\textbf{Clase}: \texttt{AutomataGUI}\
+\textbf{Framework}: Tkinter con TTK\
+\textbf{Descripci\'on}: La interfaz implementa un patr\'on de dise~no orientado a objetos que encapsula:
 \begin{itemize}
-    \item \textbf{Tasa de retorno del portafolio}: Una funci\'on que nos permite calcular la ganancia esperada de un portafolio de inversion considerando las ganancias individuales de cada instrumento.
-    \item \textbf{Varianza del portafolio}: Una funci\'on que nos permite calcular el riesgo de un portafolio de inversion considerando la covarianza de nuestros instrumentos de inversion.
+\item \textbf{Control de par\'ametros}: Variable \texttt{tk.IntVar} para el n\'umero de iteraciones
+\item \textbf{Selecci\'on de archivos}: Uso de \texttt{filedialog} para navegaci\'on del sistema de archivos
+\item \textbf{Manejo de errores}: Bloques try-except con \texttt{messagebox} para retroalimentaci\'on
+\item \textbf{Visualizaci\'on}: Integraci\'on con Matplotlib para comparaci\'on de im\'agenes
 \end{itemize}
-
-\subsection{Implementaci\'on}
-Se abordaron tres problemas de inversión, cada uno con sus respectivas limitaciones. En los tres casos se establecieron límites para todos los instrumentos de inversión en el intervalo \([0, 10]\). 
-
-En el primer problema, se buscó maximizar el beneficio del portafolio, es decir, maximizar la tasa de retorno. En el segundo problema, el objetivo fue minimizar la varianza del portafolio, manteniendo una ganancia mínima del \(35\%\); por lo tanto, se incorporó esta restricción al modelo. Finalmente, en el tercer problema se volvió a buscar la maximización de la tasa de retorno del portafolio, pero añadiendo la restricción de considerar un riesgo menor al \(20\%\).
-
-\section{M\'odulos del Algoritmo Gen\'etico}
-
-El n\'ucleo del algoritmo gen\'etico se distribuye en varios m\'odulos:
-
-\subsection{Inicializaci\'on}
-\textbf{Funci\'on}: \texttt{initialize\_population}  
-\textbf{Ubicaci\'on}: \texttt{libs/auxiliaries\_functions.py}  
-\textbf{Descripci\'on}: Genera la poblaci\'on inicial de manera uniforme en el espacio de b\'usqueda.
-
-\subsection{Selecci\'on}
-\textbf{Funci\'on}: \texttt{vectorized\_tournament\_selection}  
-\textbf{Ubicaci\'on}: \texttt{libs/selection.py}  
-\textbf{Descripci\'on}: Se usa un enfoque de torneos para la selecci\'on de padres, empleando operaciones vectorizadas con NumPy.
-
-\subsection{Cruzamiento}
-\textbf{Funciones}: \texttt{sbx\_crossover}, \texttt{sbx\_crossover\_with\_boundaries}  
-\textbf{Ubicaci\'on}: \texttt{libs/crossover.py}  
-\textbf{Descripci\'on}: Implementa el operador SBX (Simulated Binary Crossover) con y sin control de l\'imites.
-
-\subsection{Mutaci\'on}
-\textbf{Funciones}: \texttt{polynomial\_mutation}, \texttt{polynomial\_mutation\_with\_boundaries}  
-\textbf{Ubicaci\'on}: \texttt{libs/mutation.py}  
-\textbf{Descripci\'on}: Aplica mutaci\'on polinomial, con control opcional de l\'imites para mantener la viabilidad de las soluciones.
-
-\subsection{Aplicacion de Restricciones}
-\textbf{Función}: \texttt{evaluate\_individuals\_with\_constraints} 
-\textbf{Ubicaci\'on}: \texttt{libs/auxiliaries\_functions.py}  
-\textbf{Descripción}: Verifica el cumplimiento de las restricciones impuestas por el problema. Cuando se violan restricciones, se aplica un mecanismo de penalización para ajustar el valor del fitness, de modo que las soluciones inviables tengan menor probabilidad de ser seleccionadas.
-
-\subsection{Ejecuci\'on del Algoritmo}
-\textbf{Funci\'on}: \texttt{genetic\_algorithm}  
-\textbf{Ubicaci\'on}: \texttt{AG.py}  
-\textbf{Descripci\'on}: Gestiona el ciclo evolutivo completo del algoritmo gen\'etico.
-
-\section{Visualizaci\'on y Almacenamiento}
-
-\subsection{Visualizaci\'on}
-\textbf{M\'odulo}: \texttt{libs/plot.py}  
-\textbf{Funciones}: \texttt{plot\_evolucion\_fitness}, \texttt{plot\_surface\_3d}  
-\textbf{Descripci\'on}: Permite analizar la evoluci\'on del fitness y visualizar la superficie de las funciones objetivo.
-
-\subsection{Almacenamiento}
-\textbf{Estructura de Carpetas}:
+\subsubsection{Flujo de Operaci\'on del Emisor}
+El m\'etodo \texttt{run_emisor} ejecuta la siguiente secuencia:
+\begin{enumerate}
+\item Selecci\'on del archivo de imagen mediante di\'alogo
+\item Conversi\'on de imagen a arreglo binario
+\item Aplicaci\'on del algoritmo de codificaci\'on por $n$ iteraciones
+\item Almacenamiento del resultado en formato NumPy (.npy)
+\item Visualizaci\'on comparativa de im\'agenes original y codificada
+\end{enumerate}
+\subsubsection{Flujo de Operaci\'on del Receptor}
+El m\'etodo \texttt{run_receptor} implementa el proceso inverso:
+\begin{enumerate}
+\item Carga del archivo .npy codificado
+\item Extracci\'on de metadatos de forma y dimensiones
+\item Aplicaci\'on del algoritmo de decodificaci\'on
+\item Reconstrucci\'on de la imagen decodificada
+\item Visualizaci\'on del resultado
+\end{enumerate}
+\section{Visualizaci\'on y An\'alisis}
+\subsection{Visualizaci\'on de Resultados}
+\textbf{Funci\'on}: \texttt{visualize_images}\
+\textbf{Descripci\'on}: Utiliza Matplotlib para generar visualizaciones comparativas con las siguientes caracter\'isticas:
 \begin{itemize}
-    \item Directorio \texttt{outputs} organizado en subcarpetas por problema.
-    \item Historiales en archivos CSV con datos de fitness y variables.
-    \item Res\'umenes estad\'isticos de cada corrida.
+\item Configuraci\'on din\'amica de subplots seg\'un el n\'umero de im\'agenes
+\item Normalizaci\'on de escala de grises (0-255)
+\item Eliminaci\'on de ejes para mejor presentaci\'on
+\item T\'itulos descriptivos para cada imagen
 \end{itemize}
-
-\textbf{Integraci\'on}: \texttt{main\_script.py} ejecuta el algoritmo para cada funci\'on definida en \texttt{AG\_confs.py}.
-
-\textbf{Escalabilidad}: La arquitectura modular permite agregar nuevas funciones objetivo y modificar operadores gen\'eticos sin afectar la estructura base.
+\subsection{Almacenamiento de Datos}
+El sistema utiliza el formato NumPy (.npy) para el almacenamiento eficiente de arreglos binarios, aprovechando:
+\begin{itemize}
+\item \textbf{Compresi\'on impl\'icita}: Formato binario optimizado
+\item \textbf{Preservaci\'on de metadatos}: Mantenimiento de dimensiones originales
+\item \textbf{Compatibilidad}: Est\'andar para computaci\'on cient\'ifica en Python
+\end{itemize}
+\section{Consideraciones de Implementaci\'on}
+\subsection{Optimizaci\'on Computacional}
+La implementaci\'on emplea estrategias de optimizaci\'on:
+\begin{itemize}
+\item \textbf{Vectorizaci\'on}: Uso extensivo de operaciones NumPy vectorizadas
+\item \textbf{Preallocaci\'on}: Creaci\'on de arreglos auxiliares para evitar realocaciones
+\item \textbf{Operaciones in-place}: Minimizaci\'on de copias de memoria cuando es posible
+\end{itemize}
+\subsection{Manejo de Errores}
+El sistema implementa un esquema robusto de manejo de errores:
+\begin{itemize}
+\item Validaci\'on de par\'ametros de entrada
+\item Verificaci\'on de integridad de archivos
+\item Manejo de excepciones con mensajes informativos
+\item Validaci\'on de consistencia entre codificaci\'on y decodificaci\'on
+\end{itemize}
+\subsection{Escalabilidad}
+La arquitectura modular permite:
+\begin{itemize}
+\item \textbf{Extensibilidad}: Incorporaci\'on de nuevas reglas de aut\'omatas celulares
+\item \textbf{Flexibilidad}: Modificaci\'on de par\'ametros sin alteraci\'on del c\'odigo base
+\item \textbf{Mantenibilidad}: Separaci\'on clara de responsabilidades entre m\'odulos
+\end{itemize}
