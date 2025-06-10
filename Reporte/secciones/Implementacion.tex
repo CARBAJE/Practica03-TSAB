@@ -1,137 +1,154 @@
 \chapter{Implementaci\'on}
 El proyecto se ha desarrollado siguiendo una arquitectura modular que permite separar claramente las distintas funcionalidades relacionadas con el procesamiento de im\'agenes mediante aut\'omatas celulares. A continuaci\'on, se detallan los principales componentes te\'oricos e implementativos y c\'omo se integran en el sistema:
+
 \section{Fundamentos Te\'oricos}
 \subsection{Aut\'omatas Celulares y Regla 90R}
 El sistema implementa una variante de la Regla 90 de Wolfram, denominada Regla 90R (Reversible), que constituye un aut\'omata celular bidimensional con propiedades criptogr\'aficas. La regla opera sobre un arreglo binario donde cada celda evoluciona seg\'un la funci\'on:
 \begin{equation}
-C\'{i,j} = (C{i-1,j-1} + C_{i-1,j} + C_{i-1,j+1}) \bmod 2
+C_{i,j} = (C_{i-1,j-1} + C_{i-1,j} + C_{i-1,j+1}) \bmod 2
 \end{equation}
-donde $C\'_{i,j}$ representa el estado futuro de la celda en la posici\'on $(i,j)$, y la suma se realiza m\'odulo 2 (operaci\'on XOR). La implementaci\'on utiliza \'indices alternos para garantizar la reversibilidad del proceso.
+donde $C_{i,j}$ representa el estado futuro de la celda en la posici\'on $(i,j)$, y la suma se realiza m\'odulo 2 (operaci\'on XOR). La implementaci\'on utiliza \'indices alternos para garantizar la reversibilidad del proceso.
+
 \subsection{Representaci\'on Binaria de Im\'agenes}
 Las im\'agenes en escala de grises se transforman en arreglos binarios mediante el desempaquetado de bits (\texttt{np.unpackbits}), donde cada p\'ixel de 8 bits se convierte en 8 celdas binarias independientes. Esta representaci\'on permite la aplicaci\'on directa de operaciones de aut\'omatas celulares sobre los datos de imagen.
+
 \section{M\'odulos del Sistema}
 \subsection{Conversi\'on de Imagen}
-\textbf{Funciones}: \texttt{image_to_bit_array}, \texttt{bit_array_to_image}\
-\textbf{Ubicaci\'on}: Regi\'on de funciones de conversi\'on\
+\textbf{Funciones}: \texttt{image\_to\_bit\_array}, \texttt{bit\_array\_to\_image}\\
+\textbf{Ubicaci\'on}: Regi\'on de funciones de conversi\'on\\
 \textbf{Descripci\'on}:
-La funci\'on \texttt{image_to_bit_array} realiza la transformaci\'on de imagen a representaci\'on binaria mediante:
+
+La funci\'on \texttt{image\_to\_bit\_array} convierte una imagen en escala de grises a una representaci\'on binaria utilizando el siguiente procedimiento:
 \begin{enumerate}
-\item Conversi\'on a escala de grises usando \texttt{PIL.Image.convert("L")}
-\item Transformaci\'on a arreglo NumPy con \texttt{np.array()}
-\item Desempaquetado de bits con \texttt{np.unpackbits(data, axis=1)}
-\item Retorno del arreglo binario y metadatos para reconstrucci\'on
+\item Carga la imagen usando \texttt{PIL.Image.open()} y la convierte a escala de grises con \texttt{convert("L")}.
+\item La imagen se convierte a un arreglo NumPy mediante \texttt{np.array()}.
+\item El arreglo de bytes se desempaqueta en bits con \texttt{np.unpackbits()} a lo largo del eje de columnas.
+\item Se devuelve el arreglo binario junto con los metadatos necesarios (ancho, alto, padding) para su reconstrucci\'on.
 \end{enumerate}
-La funci\'on inversa \texttt{bit_array_to_image} reconstituye la imagen original:
+
+La funci\'on inversa \texttt{bit\_array\_to\_image} reconstruye la imagen original a partir del arreglo binario:
 \begin{enumerate}
-\item Recorte del arreglo binario a las dimensiones originales
-\item Empaquetado de bits con \texttt{np.packbits(binary_array, axis=1)}
-\item Eliminaci\'on del padding generado durante el empaquetado
-\item Reconstrucci\'on de la imagen PIL en modo escala de grises
+\item El arreglo se recorta para eliminar el padding y coincidir con el ancho original.
+\item Se empaquetan los bits nuevamente con \texttt{np.packbits()}.
+\item El arreglo se reinterpreta como una imagen y se convierte a objeto \texttt{PIL.Image} en modo \texttt{L} (escala de grises).
 \end{enumerate}
+
 \subsection{L\'ogica del Aut\'omata Celular}
 \subsubsection{Codificaci\'on}
-\textbf{Funci\'on}: \texttt{encode_rule_90R}\
-\textbf{Descripci\'on}: Implementa el algoritmo de codificaci\'on basado en la Regla 90R:
+\textbf{Funci\'on}: \texttt{encode\_rule\_90R}\\
+\textbf{Descripci\'on}:
+
+Esta funci\'on implementa la evoluci\'on del aut\'omata seg\'un la Regla 90R en modo codificaci\'on. Se trabaja sobre las filas impares del arreglo binario, desplazando los valores de las filas adyacentes para aplicar la operaci\'on XOR de vecindarios. Las operaciones se vectorizan con NumPy para mayor eficiencia.
+
 \begin{algorithm}[H]
 \caption{Algoritmo de Codificaci\'on Regla 90R}
 \begin{algorithmic}[1]
 \FOR{$iter = 1$ \TO $iterations$}
-\STATE $new_bits \gets bits.copy()$
-\STATE $i_idx \gets {1, 3, 5, \ldots, rows-1}$ \COMMENT{\'Indices impares}
+\STATE $new\_bits \gets bits.copy()$
+\STATE $i\_idx \gets \{1, 3, 5, \ldots, rows-1\}$ \COMMENT{\'Indices impares}
 \STATE Calcular vecindarios izquierdo y derecho
-\FOR{$i \in i_idx$}
-\STATE $new_bits[i, :] \gets (left[i, :] + bits[i-1, :] + right[i, :]) \bmod 2$
-\STATE $new_bits[i-1, :] \gets bits[i, :]$
+\FOR{$i \in i\_idx$}
+\STATE $new\_bits[i, :] \gets (left[i, :] + bits[i-1, :] + right[i, :]) \bmod 2$
+\STATE $new\_bits[i-1, :] \gets bits[i, :]$
 \ENDFOR
-\STATE $bits \gets new_bits$
+\STATE $bits \gets new\_bits$
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
-La implementaci\'on utiliza operaciones vectorizadas de NumPy para optimizar el rendimiento, procesando filas completas simult\'aneamente.
+
 \subsubsection{Decodificaci\'on}
-\textbf{Funci\'on}: \texttt{decode_rule_90R}\
-\textbf{Descripci\'on}: Implementa el proceso inverso de decodificaci\'on:
+\textbf{Funci\'on}: \texttt{decode\_rule\_90R}\\
+\textbf{Descripci\'on}:
+
+Este procedimiento invierte el proceso de codificaci\'on. Se opera ahora sobre las filas pares, usando el estado de las filas inferiores y vecinos laterales. La decodificaci\'on es sim\'etrica al proceso anterior, pero en direcci\'on inversa.
+
 \begin{algorithm}[H]
 \caption{Algoritmo de Decodificaci\'on Regla 90R}
 \begin{algorithmic}[1]
 \FOR{$iter = 1$ \TO $iterations$}
-\STATE $new_bits \gets bits.copy()$
-\STATE $i_idx \gets {0, 2, 4, \ldots, rows-2}$ \COMMENT{\'Indices pares}
+\STATE $new\_bits \gets bits.copy()$
+\STATE $i\_idx \gets \{0, 2, 4, \ldots, rows-2\}$ \COMMENT{\'Indices pares}
 \STATE Calcular vecindarios izquierdo y derecho
-\FOR{$i \in i_idx$}
-\STATE $new_bits[i, :] \gets (left[i, :] + bits[i+1, :] + right[i, :]) \bmod 2$
-\STATE $new_bits[i+1, :] \gets bits[i, :]$
+\FOR{$i \in i\_idx$}
+\STATE $new\_bits[i, :] \gets (left[i, :] + bits[i+1, :] + right[i, :]) \bmod 2$
+\STATE $new\_bits[i+1, :] \gets bits[i, :]$
 \ENDFOR
-\STATE $bits \gets new_bits$
+\STATE $bits \gets new\_bits$
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
+
 \subsection{Interfaz Gr\'afica de Usuario}
 \subsubsection{Arquitectura de la GUI}
-\textbf{Clase}: \texttt{AutomataGUI}\
-\textbf{Framework}: Tkinter con TTK\
-\textbf{Descripci\'on}: La interfaz implementa un patr\'on de dise~no orientado a objetos que encapsula:
+\textbf{Clase}: \texttt{AutomataGUI}\\
+\textbf{Framework}: Tkinter con TTK\\
+\textbf{Descripci\'on}:
+
+La interfaz gr\'afica encapsula toda la l\'ogica del sistema interactivo en una clase basada en Tkinter. Ofrece:
 \begin{itemize}
-\item \textbf{Control de par\'ametros}: Variable \texttt{tk.IntVar} para el n\'umero de iteraciones
-\item \textbf{Selecci\'on de archivos}: Uso de \texttt{filedialog} para navegaci\'on del sistema de archivos
-\item \textbf{Manejo de errores}: Bloques try-except con \texttt{messagebox} para retroalimentaci\'on
-\item \textbf{Visualizaci\'on}: Integraci\'on con Matplotlib para comparaci\'on de im\'agenes
+\item Control de par\'ametros mediante \texttt{tk.IntVar}.
+\item Selecci\'on de archivos con \texttt{filedialog.askopenfilename}.
+\item Visualizaci\'on de resultados con \texttt{matplotlib.pyplot}.
+\item Manejadores de errores mediante \texttt{try-except} y \texttt{messagebox}.
 \end{itemize}
+
 \subsubsection{Flujo de Operaci\'on del Emisor}
-El m\'etodo \texttt{run_emisor} ejecuta la siguiente secuencia:
+\textbf{M\'etodo}: \texttt{run\_emisor}
+
+Este m\'etodo ejecuta:
 \begin{enumerate}
-\item Selecci\'on del archivo de imagen mediante di\'alogo
-\item Conversi\'on de imagen a arreglo binario
-\item Aplicaci\'on del algoritmo de codificaci\'on por $n$ iteraciones
-\item Almacenamiento del resultado en formato NumPy (.npy)
-\item Visualizaci\'on comparativa de im\'agenes original y codificada
+\item Carga de la imagen de entrada.
+\item Conversi\'on a bits y codificaci\'on con la regla 90R.
+\item Almacenamiento del resultado codificado como archivo \texttt{.npy}.
+\item Visualizaci\'on comparativa de imagen original y cifrada.
 \end{enumerate}
+
 \subsubsection{Flujo de Operaci\'on del Receptor}
-El m\'etodo \texttt{run_receptor} implementa el proceso inverso:
+\textbf{M\'etodo}: \texttt{run\_receptor}
+
+Este m\'etodo invierte el proceso:
 \begin{enumerate}
-\item Carga del archivo .npy codificado
-\item Extracci\'on de metadatos de forma y dimensiones
-\item Aplicaci\'on del algoritmo de decodificaci\'on
-\item Reconstrucci\'on de la imagen decodificada
-\item Visualizaci\'on del resultado
+\item Carga del archivo \texttt{.npy} con los datos codificados.
+\item Extracci\'on de metadatos.
+\item Aplicaci\'on del proceso de decodificaci\'on.
+\item Reconstrucci\'on de la imagen y visualizaci\'on del resultado.
 \end{enumerate}
+
 \section{Visualizaci\'on y An\'alisis}
 \subsection{Visualizaci\'on de Resultados}
-\textbf{Funci\'on}: \texttt{visualize_images}\
-\textbf{Descripci\'on}: Utiliza Matplotlib para generar visualizaciones comparativas con las siguientes caracter\'isticas:
-\begin{itemize}
-\item Configuraci\'on din\'amica de subplots seg\'un el n\'umero de im\'agenes
-\item Normalizaci\'on de escala de grises (0-255)
-\item Eliminaci\'on de ejes para mejor presentaci\'on
-\item T\'itulos descriptivos para cada imagen
-\end{itemize}
+\textbf{Funci\'on}: \texttt{visualize\_images}
+
+Esta funci\'on utiliza Matplotlib para mostrar comparaciones entre im\'agenes, configurando los subplots din\'amicamente seg\'un el n\'umero de im\'agenes. Elimina ejes para claridad y agrega t\'itulos descriptivos.
+
 \subsection{Almacenamiento de Datos}
-El sistema utiliza el formato NumPy (.npy) para el almacenamiento eficiente de arreglos binarios, aprovechando:
+Los datos binarios intermedios se almacenan en formato \texttt{.npy}, lo cual permite:
 \begin{itemize}
-\item \textbf{Compresi\'on impl\'icita}: Formato binario optimizado
-\item \textbf{Preservaci\'on de metadatos}: Mantenimiento de dimensiones originales
-\item \textbf{Compatibilidad}: Est\'andar para computaci\'on cient\'ifica en Python
+\item Eficiencia de lectura/escritura.
+\item Preservaci\'on de dimensiones originales.
+\item Alta compatibilidad con herramientas de procesamiento en Python.
 \end{itemize}
+
 \section{Consideraciones de Implementaci\'on}
 \subsection{Optimizaci\'on Computacional}
-La implementaci\'on emplea estrategias de optimizaci\'on:
+El c\'odigo se ha optimizado mediante:
 \begin{itemize}
-\item \textbf{Vectorizaci\'on}: Uso extensivo de operaciones NumPy vectorizadas
-\item \textbf{Preallocaci\'on}: Creaci\'on de arreglos auxiliares para evitar realocaciones
-\item \textbf{Operaciones in-place}: Minimizaci\'on de copias de memoria cuando es posible
+\item Vectorizaci\'on con NumPy.
+\item Preasignaci\'on de memoria para arreglos.
+\item Reducci\'on de copias innecesarias mediante operaciones \texttt{in-place}.
 \end{itemize}
+
 \subsection{Manejo de Errores}
-El sistema implementa un esquema robusto de manejo de errores:
+El sistema incluye validaci\'on exhaustiva:
 \begin{itemize}
-\item Validaci\'on de par\'ametros de entrada
-\item Verificaci\'on de integridad de archivos
-\item Manejo de excepciones con mensajes informativos
-\item Validaci\'on de consistencia entre codificaci\'on y decodificaci\'on
+\item Verificaci\'on de tipo y formato de entradas.
+\item Comprobaci\'on de consistencia antes/despu\'es del cifrado.
+\item Notificaciones al usuario mediante ventanas emergentes.
 \end{itemize}
+
 \subsection{Escalabilidad}
-La arquitectura modular permite:
+La estructura modular admite:
 \begin{itemize}
-\item \textbf{Extensibilidad}: Incorporaci\'on de nuevas reglas de aut\'omatas celulares
-\item \textbf{Flexibilidad}: Modificaci\'on de par\'ametros sin alteraci\'on del c\'odigo base
-\item \textbf{Mantenibilidad}: Separaci\'on clara de responsabilidades entre m\'odulos
+\item Inclusi\'on de nuevas reglas criptogr\'aficas.
+\item Reemplazo f\'acil de componentes.
+\item Reutilizaci\'on del c\'odigo base en otros proyectos.
 \end{itemize}
